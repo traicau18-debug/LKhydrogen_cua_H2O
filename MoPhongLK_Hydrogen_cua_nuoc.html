@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="vi">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mô phỏng liên kết hydrogen</title>
+  <script src="/_sdk/element_sdk.js"></script>
+  <style>
+    body {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      height: 100%;
+      overflow: hidden;
+    }
+    
+    html {
+      height: 100%;
+    }
+    
+    .container {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    
+    .title {
+      font-size: 32px;
+      font-weight: bold;
+      color: #ffffff;
+      margin: 0 0 10px 0;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
+    
+    .description {
+      font-size: 16px;
+      color: #f0f0f0;
+      margin: 0;
+    }
+    
+    .simulation-area {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 20px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+    
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    
+    .controls {
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 15px;
+    }
+    
+    .btn {
+      padding: 12px 24px;
+      font-size: 16px;
+      font-weight: 600;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+    }
+    
+    .btn-primary {
+      background: #4CAF50;
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background: #45a049;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 8px rgba(0,0,0,0.3);
+    }
+    
+    .btn-secondary {
+      background: #2196F3;
+      color: white;
+    }
+    
+    .btn-secondary:hover {
+      background: #0b7dda;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 8px rgba(0,0,0,0.3);
+    }
+    
+    .btn-danger {
+      background: #f44336;
+      color: white;
+    }
+    
+    .btn-danger:hover {
+      background: #da190b;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 8px rgba(0,0,0,0.3);
+    }
+    
+    .legend {
+      display: flex;
+      gap: 30px;
+      justify-content: center;
+      flex-wrap: wrap;
+      padding: 15px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 15px;
+    }
+    
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .legend-circle {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    
+    .legend-text {
+      color: white;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    
+    .legend-line {
+      width: 30px;
+      height: 3px;
+      background: #FFD700;
+    }
+  </style>
+  <style>@view-transition { navigation: auto; }</style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+  <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
+ </head>
+ <body>
+  <div class="container">
+   <div class="header">
+    <h1 class="title" id="title">Mô phỏng liên kết hydrogen</h1>
+    <p class="description" id="description">Quan sát các phân tử nước (H₂O) tương tác và hình thành liên kết hydrogen</p>
+    <p class="description" id="description">Thiết kế: Nguyễn Mạnh Hưng</p>
+   </div>
+   <div class="controls"><button class="btn btn-primary" id="addMolecule">➕ Thêm Phân Tử</button> <button class="btn btn-secondary" id="toggleAnimation">⏸️ Tạm Dừng</button> <button class="btn btn-danger" id="reset">🔄 Đặt Lại</button>
+   </div>
+   <div class="simulation-area">
+    <canvas id="canvas"></canvas>
+   </div>
+   <div class="legend">
+    <div class="legend-item">
+     <div class="legend-circle" style="background: #FF6B6B;"></div><span class="legend-text" id="oxygenLabel">Oxygen (O)</span>
+    </div>
+    <div class="legend-item">
+     <div class="legend-circle" style="background: #E8E8E8;"></div><span class="legend-text" id="hydrogenLabel">Hydrogen (H)</span>
+    </div>
+    <div class="legend-item">
+     <div class="legend-line"></div><span class="legend-text" id="bondLabel">Liên kết hydrogen</span>
+    </div>
+   </div>
+  </div>
+  <script>
+    const defaultConfig = {
+      title_text: "Mô phỏng liên kết hydrogen",
+      description_text: "Quan sát các phân tử nước (H₂O) tương tác và hình thành liên kết hydrogen",
+      oxygen_label: "Oxygen (O)",
+      hydrogen_label: "Hydrogen (H)",
+      bond_label: "Liên kết hydrogen",
+      background_color: "#667eea",
+      surface_color: "#ffffff",
+      text_color: "#ffffff",
+      primary_action_color: "#4CAF50",
+      secondary_action_color: "#2196F3"
+    };
+
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    let animationId;
+    let isAnimating = true;
+    let molecules = [];
+
+    function resizeCanvas() {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      canvas.width = rect.width;
+      canvas.height = rect.height;
+    }
+
+    class WaterMolecule {
+      constructor(x, y) {
+        this.x = x;
+        this.y = y;
+        this.vx = (Math.random() - 0.5) * 2;
+        this.vy = (Math.random() - 0.5) * 2;
+        this.angle = Math.random() * Math.PI * 2;
+        this.angularVelocity = (Math.random() - 0.5) * 0.02;
+        this.oxygenRadius = 15;
+        this.hydrogenRadius = 8;
+        this.bondLength = 25;
+      }
+
+      update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.angle += this.angularVelocity;
+
+        if (this.x < this.oxygenRadius || this.x > canvas.width - this.oxygenRadius) {
+          this.vx *= -1;
+          this.x = Math.max(this.oxygenRadius, Math.min(canvas.width - this.oxygenRadius, this.x));
+        }
+        if (this.y < this.oxygenRadius || this.y > canvas.height - this.oxygenRadius) {
+          this.vy *= -1;
+          this.y = Math.max(this.oxygenRadius, Math.min(canvas.height - this.oxygenRadius, this.y));
+        }
+      }
+
+      draw() {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.angle);
+
+        const h1x = Math.cos(2.1) * this.bondLength;
+        const h1y = Math.sin(2.1) * this.bondLength;
+        const h2x = Math.cos(-2.1) * this.bondLength;
+        const h2y = Math.sin(-2.1) * this.bondLength;
+
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(h1x, h1y);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(h2x, h2y);
+        ctx.stroke();
+
+        ctx.fillStyle = '#E8E8E8';
+        ctx.beginPath();
+        ctx.arc(h1x, h1y, this.hydrogenRadius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#999';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.fillStyle = '#E8E8E8';
+        ctx.beginPath();
+        ctx.arc(h2x, h2y, this.hydrogenRadius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#999';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.fillStyle = '#FF6B6B';
+        ctx.beginPath();
+        ctx.arc(0, 0, this.oxygenRadius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#CC5555';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.restore();
+      }
+
+      getHydrogenPositions() {
+        const h1x = this.x + Math.cos(this.angle + 2.1) * this.bondLength;
+        const h1y = this.y + Math.sin(this.angle + 2.1) * this.bondLength;
+        const h2x = this.x + Math.cos(this.angle - 2.1) * this.bondLength;
+        const h2y = this.y + Math.sin(this.angle - 2.1) * this.bondLength;
+        return [{x: h1x, y: h1y}, {x: h2x, y: h2y}];
+      }
+    }
+
+    function drawHydrogenBonds() {
+      ctx.strokeStyle = '#FFD700';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 5]);
+
+      for (let i = 0; i < molecules.length; i++) {
+        for (let j = i + 1; j < molecules.length; j++) {
+          const m1 = molecules[i];
+          const m2 = molecules[j];
+          const hydrogens1 = m1.getHydrogenPositions();
+          
+          for (let h of hydrogens1) {
+            const dx = h.x - m2.x;
+            const dy = h.y - m2.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance < 60 && distance > 20) {
+              ctx.beginPath();
+              ctx.moveTo(h.x, h.y);
+              ctx.lineTo(m2.x, m2.y);
+              ctx.stroke();
+            }
+          }
+        }
+      }
+      ctx.setLineDash([]);
+    }
+
+    function animate() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      drawHydrogenBonds();
+      
+      for (let molecule of molecules) {
+        if (isAnimating) {
+          molecule.update();
+        }
+        molecule.draw();
+      }
+      
+      animationId = requestAnimationFrame(animate);
+    }
+
+    function addMolecule() {
+      const x = Math.random() * (canvas.width - 60) + 30;
+      const y = Math.random() * (canvas.height - 60) + 30;
+      molecules.push(new WaterMolecule(x, y));
+    }
+
+    function initMolecules() {
+      molecules = [];
+      for (let i = 0; i < 5; i++) {
+        addMolecule();
+      }
+    }
+
+    document.getElementById('addMolecule').addEventListener('click', (e) => {
+      e.preventDefault();
+      addMolecule();
+    });
+
+    document.getElementById('toggleAnimation').addEventListener('click', (e) => {
+      e.preventDefault();
+      isAnimating = !isAnimating;
+      e.target.textContent = isAnimating ? '⏸️ Tạm Dừng' : '▶️ Tiếp Tục';
+    });
+
+    document.getElementById('reset').addEventListener('click', (e) => {
+      e.preventDefault();
+      initMolecules();
+      isAnimating = true;
+      document.getElementById('toggleAnimation').textContent = '⏸️ Tạm Dừng';
+    });
+
+    window.addEventListener('resize', resizeCanvas);
+
+    async function onConfigChange(config) {
+      document.getElementById('title').textContent = config.title_text || defaultConfig.title_text;
+      document.getElementById('description').textContent = config.description_text || defaultConfig.description_text;
+      document.getElementById('oxygenLabel').textContent = config.oxygen_label || defaultConfig.oxygen_label;
+      document.getElementById('hydrogenLabel').textContent = config.hydrogen_label || defaultConfig.hydrogen_label;
+      document.getElementById('bondLabel').textContent = config.bond_label || defaultConfig.bond_label;
+      
+      const bgColor = config.background_color || defaultConfig.background_color;
+      document.body.style.background = `linear-gradient(135deg, ${bgColor} 0%, #764ba2 100%)`;
+      
+      const primaryColor = config.primary_action_color || defaultConfig.primary_action_color;
+      const secondaryColor = config.secondary_action_color || defaultConfig.secondary_action_color;
+      document.querySelectorAll('.btn-primary').forEach(btn => {
+        btn.style.background = primaryColor;
+      });
+      document.querySelectorAll('.btn-secondary').forEach(btn => {
+        btn.style.background = secondaryColor;
+      });
+    }
+
+    if (window.elementSdk) {
+      window.elementSdk.init({
+        defaultConfig,
+        onConfigChange,
+        mapToCapabilities: (config) => ({
+          recolorables: [
+            {
+              get: () => config.background_color || defaultConfig.background_color,
+              set: (value) => {
+                config.background_color = value;
+                window.elementSdk.setConfig({ background_color: value });
+              }
+            },
+            {
+              get: () => config.surface_color || defaultConfig.surface_color,
+              set: (value) => {
+                config.surface_color = value;
+                window.elementSdk.setConfig({ surface_color: value });
+              }
+            },
+            {
+              get: () => config.text_color || defaultConfig.text_color,
+              set: (value) => {
+                config.text_color = value;
+                window.elementSdk.setConfig({ text_color: value });
+              }
+            },
+            {
+              get: () => config.primary_action_color || defaultConfig.primary_action_color,
+              set: (value) => {
+                config.primary_action_color = value;
+                window.elementSdk.setConfig({ primary_action_color: value });
+              }
+            },
+            {
+              get: () => config.secondary_action_color || defaultConfig.secondary_action_color,
+              set: (value) => {
+                config.secondary_action_color = value;
+                window.elementSdk.setConfig({ secondary_action_color: value });
+              }
+            }
+          ],
+          borderables: [],
+          fontEditable: undefined,
+          fontSizeable: undefined
+        }),
+        mapToEditPanelValues: (config) => new Map([
+          ["title_text", config.title_text || defaultConfig.title_text],
+          ["description_text", config.description_text || defaultConfig.description_text],
+          ["oxygen_label", config.oxygen_label || defaultConfig.oxygen_label],
+          ["hydrogen_label", config.hydrogen_label || defaultConfig.hydrogen_label],
+          ["bond_label", config.bond_label || defaultConfig.bond_label]
+        ])
+      });
+    }
+
+    resizeCanvas();
+    initMolecules();
+    animate();
+  </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'999cc6ce54bf88cc',t:'MTc2MjM1MDE2OS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
